@@ -225,14 +225,28 @@ int main(void)
     float paddle2y = 0.0f;
     float paddleSpeed = 0.001f;
 
+    glm::vec2 ballPosition(0.0f);
+    glm::vec2 ballVelocity(0.1f, 0.0f);
+
+    float deltaTime = 0.0f;
+    float lastFrameTime = 0.0f;
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
+
+        float currentFrameTime = glfwGetTime();
+        deltaTime = currentFrameTime - lastFrameTime;
+        lastFrameTime = currentFrameTime;
+
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
+
+        ballPosition += ballVelocity * deltaTime;
         glBindVertexArray(ballVAO);
         glUniform4f(location, 1.0f, 1.0f, 0.0f, 1.0f);
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+        glm::mat4 modelB = glm::translate(glm::mat4(1.0f), glm::vec3(ballPosition.x, ballPosition.y, 1.0f));
+        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(modelB));
         glDrawArrays(GL_TRIANGLE_FAN, 0, vertexNo);
         
 
@@ -252,13 +266,13 @@ int main(void)
         glBindVertexArray(paddleVAO);
 
         //paddle 1
-        glm::mat4 model1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,paddle1y,0.0f));
+        glm::mat4 model1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,paddle1y,1.0f));
         glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model1));
         glUniform4f(location, 1.0f, 0.0f, 0.0f, 1.0f);
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         //paddle 2
-        glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, paddle2y, 0.0f));
+        glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, paddle2y, 1.0f));
         glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model2));
         //glUniform4f(location, 1.0f, 1.0f, 1.0f, 1.0f);
         glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
@@ -273,6 +287,21 @@ int main(void)
         glUniform4f(location, 0.0f, 1.0f, 1.0f, 1.0f);
         glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
         glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
+
+        glm::mat4 invModelMatrixPaddle1 = glm::inverse(model1);
+        glm::mat4 invModelMatrixPaddle2 = glm::inverse(model2);
+
+        glm::vec4 ballPosPaddle1Space = invModelMatrixPaddle1 * glm::vec4(ballPosition, 1.0f, 1.0f);
+        glm::vec4 ballPosPaddle2Space = invModelMatrixPaddle2 * glm::vec4(ballPosition, 1.0f, 1.0f);
+        //cout << ballPosPaddle1Space.x << endl;
+        //cout << ballPosPaddle2Space.x << endl;
+        
+        if (ballPosPaddle1Space.x > -1.0f && ballPosPaddle1Space.x < 1.0f && ballPosPaddle1Space.y > -1.0f && ballPosPaddle1Space.y < 1.0f) {
+            cout << "padde 1" << endl;
+        }
+        if (ballPosPaddle2Space.x > -1.0f && ballPosPaddle2Space.x < 1.0f && ballPosPaddle2Space.y > -1.0f && ballPosPaddle2Space.y < 1.0f) {
+            cout << "padde 2" << endl;
+        }
 
 
         glBindVertexArray(0);
