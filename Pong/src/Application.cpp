@@ -9,9 +9,27 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <ft2build.h>
+#include <freetype/freetype.h>
+#include FT_FREETYPE_H  
+#include <irrKlang.h>
+
+#include "Ball.h"
+#include "Paddle.h"
+#include "Wall.h"
+#include "TextRenderer.h"
+#include "AudioManager.h"
+
 
 
 using namespace std;
+
+enum class GameState {
+    START,
+    LOSE,
+    PLAY
+};
+
 
 struct ShaderProgramSource
 {
@@ -120,8 +138,11 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(640, 480, "Pong", NULL, NULL);
 
     if (!window)
     {
@@ -132,53 +153,88 @@ int main(void)
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
 
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback); //for fullsize of window 
+    //glfwSetFramebufferSizeCallback(window, framebuffer_size_callback); //for fullsize of window 
 
     if (glewInit() != GLEW_OK)
         cout << "error";
     cout << glGetString(GL_VERSION); 
 
-    float positions[6] = {
+    irrklang::ISoundEngine* SoundEngine = irrklang::createIrrKlangDevice();
+    //SoundEngine->play2D("res/sounds/getout.ogg", true);
+
+    AudioManager audioManager;
+
+
+    /*float positions[6] = {
         0.0f, 0.5f,
        -0.5f, -0.5f,
        0.5f, -0.5f
-    };
+    };*/
 
     const int vertexNo = 20;
     float circleVertices[vertexNo * 2];
     const float radius = 0.03f;
 
-    for (int i = 0; i < vertexNo; i++) {
-        float angle = 2.0f * M_PI * i / vertexNo;
-        circleVertices[i * 2] = radius * cosf(angle);
-        circleVertices[i * 2 + 1] = radius * sinf(angle);
-    }
+    //for (int i = 0; i < vertexNo; i++) {
+    //    float angle = 2.0f * M_PI * i / vertexNo;
+    //    circleVertices[i * 2] = radius * cosf(angle);
+    //    circleVertices[i * 2 + 1] = radius * sinf(angle);
+    //    /*cout << circleVertices[i * 2] << " " <<
+    //        circleVertices[i * 2 + 1] << endl;*/
 
-    float paddleVertices[] = {
+    //}
+
+    //float paddleVertices[] = {
+    //    -0.9f, 0.2f,  //left paddle
+    //    -0.9f,-0.2f,
+    //    -0.85f,-0.2f,
+    //    -0.85f, 0.2f,
+
+    //     0.9f, 0.2f,  //right paddle
+    //     0.9f,-0.2f,
+    //     0.85f,-0.2f,
+    //     0.85f, 0.2f,
+    //};
+    float paddle1Vertices[] = {
         -0.9f, 0.2f,  //left paddle
         -0.9f,-0.2f,
         -0.85f,-0.2f,
         -0.85f, 0.2f,
-
+    };
+    float paddle2Vertices[] = {
          0.9f, 0.2f,  //right paddle
          0.9f,-0.2f,
          0.85f,-0.2f,
          0.85f, 0.2f,
     };
 
-    float walls[] = {
+
+    //float walls[] = {
+    //    -1.0f, 1.0f,    //upper wall
+    //    -1.0f, 0.98f,
+    //     1.0f, 0.98f,
+    //     1.0f, 1.0f,
+
+    //    -1.0f, -1.0f,   //lower wall
+    //    -1.0f, -0.98f,
+    //     1.0f, -0.98f,
+    //     1.0f, -1.0f
+    //};
+
+    float wall1Vertices[] = {
         -1.0f, 1.0f,    //upper wall
         -1.0f, 0.98f,
          1.0f, 0.98f,
          1.0f, 1.0f,
-
-        -1.0f, -1.0f,   //lower wall
+    };
+    float wall2Vertices[] = {
+         -1.0f, -1.0f,   //lower wall
         -1.0f, -0.98f,
          1.0f, -0.98f,
          1.0f, -1.0f
     };
 
-    unsigned int ballVAO, paddleVAO;
+    /*unsigned int ballVAO, paddleVAO;
     glGenVertexArrays(1, &ballVAO);
     glBindVertexArray(ballVAO);
 
@@ -213,11 +269,15 @@ int main(void)
     glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(float), walls, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), 0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), 0);*/
 
     ShaderProgramSource source = parseShader("res/shaders/Basic.shader");
     unsigned int shader = createShader(source.VertexSource, source.FragmentSource);
     glUseProgram(shader);
+    ShaderProgramSource source2 = parseShader("res/shaders/TextRenderer.shader");
+    unsigned int shader2 = createShader(source2.VertexSource, source2.FragmentSource);
+    glUseProgram(shader2);
+
     int location = glGetUniformLocation(shader, "uniformColor");
     int modelLocation = glGetUniformLocation(shader, "modelMatrix");
 
@@ -225,13 +285,50 @@ int main(void)
     float paddle2y = 0.0f;
     float paddleSpeed = 0.001f;
 
-    glm::vec2 ballPosition(0.0f);
-    glm::vec2 ballVelocity(0.1f, 0.0f);
+    std::vector<VertexAttribute> ballVertexAttributes;
+    ballVertexAttributes.push_back({ 0, 2, GL_FLOAT, false, sizeof(float) * 2, 0 });
+
+    glm::vec2 ballPosition(0.0f, 0.0f);
+    glm::vec2 ballVelocity(0.0f, 0.0f);
+    glm::vec4 color(0.0f, 0.0f, 1.0f, 1.0f);
+    glm::mat4 ballModelMatrix;
+    float ballSpeed = 1.5f;
+
+    Ball ball(ballPosition,color,ballVelocity,ballSpeed,radius,vertexNo,ballVertexAttributes,shader,window, audioManager);
+
+    std::vector<VertexAttribute> paddleVertexAttributes;
+    paddleVertexAttributes.push_back({ 0, 2, GL_FLOAT, false, sizeof(float) * 2, 0 });
+
+    glm::vec2 paddlePosition1(-0.875f, 0.0f);
+    glm::vec2 paddlePosition2( 0.875f, 0.0f);
+    glm::vec2 paddleVelocity(0.0f);
+    glm::vec4 paddleColor(0.0f, 1.0f, 1.0f, 1.0f);
+    float paddlesLength = 0.05f;
+    float paddlesWidth = 0.4f;
+
+
+    Paddle paddle1(paddlePosition1, paddleColor, paddleVelocity, paddle1Vertices, 4, paddleVertexAttributes, shader, window, paddlesLength, paddlesWidth);
+    Paddle paddle2(paddlePosition2, paddleColor, paddleVelocity, paddle2Vertices, 4, paddleVertexAttributes, shader, window, paddlesLength, paddlesWidth);
+
+    glm::vec2 wallPosition1(0.0f,  0.99f);
+    glm::vec2 wallPosition2(0.0f, -0.99f);
+    glm::vec2 wallVelocity(0.0f);
+    glm::vec4 wallColor(0.0f, 1.0f, 1.0f, 1.0f);
+    float wallLength = 2.0f;
+    float wallWidth = 0.1f;
+
+    Paddle wall1(wallPosition1, wallColor, wallVelocity, wall1Vertices, 4, paddleVertexAttributes, shader, window, wallLength, wallWidth);
+    Paddle wall2(wallPosition2, wallColor, wallVelocity, wall1Vertices, 4, paddleVertexAttributes, shader, window, wallLength, wallWidth);
+
+    TextRenderer textRenderer("D:/OpenGL/Pong/Pong/res/Fonts/arial.ttf",48,640, 480, shader2);
 
     float deltaTime = 0.0f;
     float lastFrameTime = 0.0f;
-
+    glUseProgram(shader);
     /* Loop until the user closes the window */
+
+    GameState gameState(GameState::START);
+
     while (!glfwWindowShouldClose(window))
     {
 
@@ -242,67 +339,51 @@ int main(void)
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        ballPosition += ballVelocity * deltaTime;
-        glBindVertexArray(ballVAO);
-        glUniform4f(location, 1.0f, 1.0f, 0.0f, 1.0f);
-        glm::mat4 modelB = glm::translate(glm::mat4(1.0f), glm::vec3(ballPosition.x, ballPosition.y, 1.0f));
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(modelB));
-        glDrawArrays(GL_TRIANGLE_FAN, 0, vertexNo);
-        
+        //textRenderer.rendertext("hello", 0.0f, 0.0f, 1, glm::vec3(1.0f, 1.0f, 1.0f));
 
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) 
-            paddle1y += paddleSpeed;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            paddle1y -= paddleSpeed;
+        ball.draw(deltaTime);
 
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            paddle2y += paddleSpeed;
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            paddle2y -= paddleSpeed;
+        paddle1.draw(deltaTime);;
+        paddle2.draw(deltaTime);
 
-        paddle1y = glm::clamp(paddle1y, -1.0f + 0.22f , 1.0f - 0.22f );
-        paddle2y = glm::clamp(paddle2y, -1.0f + 0.22f , 1.0f - 0.22f );
+        wall1.draw(deltaTime);
+        wall2.draw(deltaTime);
 
-        glBindVertexArray(paddleVAO);
-
-        //paddle 1
-        glm::mat4 model1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f,paddle1y,1.0f));
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model1));
-        glUniform4f(location, 1.0f, 0.0f, 0.0f, 1.0f);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-        //paddle 2
-        glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, paddle2y, 1.0f));
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model2));
-        //glUniform4f(location, 1.0f, 1.0f, 1.0f, 1.0f);
-        glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
-
-        //upper wall
-        glBindVertexArray(wallsVAO);
-        glUniform4f(location, 0.0f, 1.0f, 1.0f, 1.0f);
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-        //lower wall
-        glBindVertexArray(wallsVAO);
-        glUniform4f(location, 0.0f, 1.0f, 1.0f, 1.0f);
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
-        glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
-
-        glm::mat4 invModelMatrixPaddle1 = glm::inverse(model1);
-        glm::mat4 invModelMatrixPaddle2 = glm::inverse(model2);
-
-        glm::vec4 ballPosPaddle1Space = invModelMatrixPaddle1 * glm::vec4(ballPosition, 1.0f, 1.0f);
-        glm::vec4 ballPosPaddle2Space = invModelMatrixPaddle2 * glm::vec4(ballPosition, 1.0f, 1.0f);
-        //cout << ballPosPaddle1Space.x << endl;
-        //cout << ballPosPaddle2Space.x << endl;
-        
-        if (ballPosPaddle1Space.x > -1.0f && ballPosPaddle1Space.x < 1.0f && ballPosPaddle1Space.y > -1.0f && ballPosPaddle1Space.y < 1.0f) {
-            cout << "padde 1" << endl;
+        if (gameState == GameState::START) {
+            // Render start screen elements
+            // For example, display "Press Spacebar to Start" text
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+                ball.setVelocity(glm::vec2(1.0f, 0.0f));
+                gameState = GameState::PLAY;
+                ball.setSpeed(ballSpeed);
+            }
         }
-        if (ballPosPaddle2Space.x > -1.0f && ballPosPaddle2Space.x < 1.0f && ballPosPaddle2Space.y > -1.0f && ballPosPaddle2Space.y < 1.0f) {
-            cout << "padde 2" << endl;
+        else if (gameState == GameState::PLAY) {
+            // Render gameplay elements
+            // This includes rendering players, obstacles, etc.
+            paddle1.handleInput(GLFW_KEY_W, GLFW_KEY_S);
+            paddle2.handleInput(GLFW_KEY_UP, GLFW_KEY_DOWN);
+
+            ball.checkCollision(paddle1, deltaTime, 1);
+            ball.checkCollision(paddle2, deltaTime, 1);
+            ball.checkCollision(wall1, deltaTime, 2);
+            ball.checkCollision(wall2, deltaTime, 2);
+
+        }
+        else if (gameState == GameState::LOSE) {
+            // Render lose screen elements
+            // For example, display "Game Over. Press Spacebar to Restart" text
+            ball.setPosition(glm::vec2(0.0f, 0.0f));
+            ball.setVelocity(glm::vec2(0.0f, 0.0f));
+            paddle1.setPosition(glm::vec2(-0.875f, 0.0f));
+            paddle2.setPosition(glm::vec2(0.875f, 0.0f));
+            gameState = GameState::START;
         }
 
+        if (ball.getPosition().x > 1.0f || ball.getPosition().x < -1.0f) {
+            gameState = GameState::LOSE;
+        }
+        
 
         glBindVertexArray(0);
 
@@ -316,3 +397,4 @@ int main(void)
     glfwTerminate();
     return 0;
 }
+//do the shader2 and I think that the uniforms in the text renderer are not been set in the draw so check the text reder fuction which is rendering the text

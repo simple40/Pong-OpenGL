@@ -13,9 +13,11 @@ void main()
 #version 330 core
 
 uniform vec4 uniformColor;  // Color uniform
+uniform float alpha;
 out vec4 fragColor;  // Output color passed to the fragment shader
 
 void main()
 {
-	fragColor = uniformColor;
+	//fragColor = uniformColor;
+	fragColor = vec4(uniformColor.rgb, uniformColor.a * alpha);
 };
