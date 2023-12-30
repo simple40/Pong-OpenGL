@@ -164,37 +164,8 @@ int main(void)
 
     AudioManager audioManager;
 
+    
 
-    /*float positions[6] = {
-        0.0f, 0.5f,
-       -0.5f, -0.5f,
-       0.5f, -0.5f
-    };*/
-
-    const int vertexNo = 20;
-    float circleVertices[vertexNo * 2];
-    const float radius = 0.03f;
-
-    //for (int i = 0; i < vertexNo; i++) {
-    //    float angle = 2.0f * M_PI * i / vertexNo;
-    //    circleVertices[i * 2] = radius * cosf(angle);
-    //    circleVertices[i * 2 + 1] = radius * sinf(angle);
-    //    /*cout << circleVertices[i * 2] << " " <<
-    //        circleVertices[i * 2 + 1] << endl;*/
-
-    //}
-
-    //float paddleVertices[] = {
-    //    -0.9f, 0.2f,  //left paddle
-    //    -0.9f,-0.2f,
-    //    -0.85f,-0.2f,
-    //    -0.85f, 0.2f,
-
-    //     0.9f, 0.2f,  //right paddle
-    //     0.9f,-0.2f,
-    //     0.85f,-0.2f,
-    //     0.85f, 0.2f,
-    //};
     float paddle1Vertices[] = {
         -0.9f, 0.2f,  //left paddle
         -0.9f,-0.2f,
@@ -208,19 +179,6 @@ int main(void)
          0.85f, 0.2f,
     };
 
-
-    //float walls[] = {
-    //    -1.0f, 1.0f,    //upper wall
-    //    -1.0f, 0.98f,
-    //     1.0f, 0.98f,
-    //     1.0f, 1.0f,
-
-    //    -1.0f, -1.0f,   //lower wall
-    //    -1.0f, -0.98f,
-    //     1.0f, -0.98f,
-    //     1.0f, -1.0f
-    //};
-
     float wall1Vertices[] = {
         -1.0f, 1.0f,    //upper wall
         -1.0f, 0.98f,
@@ -233,43 +191,6 @@ int main(void)
          1.0f, -0.98f,
          1.0f, -1.0f
     };
-
-    /*unsigned int ballVAO, paddleVAO;
-    glGenVertexArrays(1, &ballVAO);
-    glBindVertexArray(ballVAO);
-
-    unsigned int ballVBO;
-    glGenBuffers(1, &ballVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, ballVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertexNo * 2 * sizeof(float), circleVertices, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, false, sizeof(float) * 2, 0);
-
-
-    glGenVertexArrays(1, &paddleVAO);
-    glBindVertexArray(paddleVAO);
-
-    unsigned int paddleVBO;
-    glGenBuffers(1, &paddleVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, paddleVBO);
-    glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(float), paddleVertices, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), 0);
-
-    
-    unsigned int wallsVAO;
-    glGenVertexArrays(1, &wallsVAO);
-    glBindVertexArray(wallsVAO);
-
-    unsigned int wallsVBO;
-    glGenBuffers(1, &wallsVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, wallsVBO);
-    glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(float), walls, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), 0);*/
 
     ShaderProgramSource source = parseShader("res/shaders/Basic.shader");
     unsigned int shader = createShader(source.VertexSource, source.FragmentSource);
@@ -293,6 +214,9 @@ int main(void)
     glm::vec4 color(0.0f, 0.0f, 1.0f, 1.0f);
     glm::mat4 ballModelMatrix;
     float ballSpeed = 1.5f;
+    const int vertexNo = 20;
+    float circleVertices[vertexNo * 2];
+    const float radius = 0.03f;
 
     Ball ball(ballPosition,color,ballVelocity,ballSpeed,radius,vertexNo,ballVertexAttributes,shader,window, audioManager);
 
